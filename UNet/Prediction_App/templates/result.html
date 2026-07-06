@@ -1,0 +1,183 @@
+<!doctype html>
+<html>
+<head>
+    <title>Analysis Result</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        h1 {
+            color: #333;
+        }
+        img {
+            width: 50%;
+            height: auto;
+            margin: 20px 0;
+            border: 2px solid #ccc;
+        }
+        .slider-container {
+            width: 80%;
+            margin: 20px auto;
+        }
+        .slider {
+            width: 100%;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        a {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        a:hover {
+            background-color: #45a049;
+        }
+        .metrics {
+            margin: 20px 0;
+            text-align: left;
+            display: inline-block;
+        }
+        .metrics p {
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Predicted Segmentation Mask</h1>
+
+    <div class="slider-container">
+        <button id="prevSlice" onclick="changeSlice(-1)">Previous</button>
+        <input type="range" min="0" max="{{ num_slices - 1 }}" value="0" class="slider" id="sliceSlider">
+        <button id="nextSlice" onclick="changeSlice(1)">Next</button>
+    </div>
+
+    <label>
+        <input type="checkbox" id="toggleMask" checked>
+        Show Segmentation Mask
+    </label>
+
+    <img id="sliceImage" src="data:image/png;base64,{{ image_slices[0] }}" alt="Predicted Mask Overlay">
+
+    <div class="metrics">
+        <h2>Global Metrics</h2>
+        <p><strong>Mean Confidence:</strong> {{ global_metrics.mean_confidence }}</p>
+        <p><strong>Mean Entropy:</strong> {{ global_metrics.mean_entropy }}</p>
+        <p><strong>Boundary Smoothness:</strong> {{ global_metrics.boundary_smoothness }}</p>
+        <h3>Global Class Distribution</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Class</th>
+                    <th>Frequency</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cls, freq in global_metrics.class_distribution.items() %}
+                    <tr>
+                        <td>{{ cls }}</td>
+                        <td>{{ freq }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    
+        <h2>Slice-Specific Metrics</h2>
+        <div id="sliceMetrics">
+            <p><strong>Confidence:</strong> <span id="sliceConfidence">{{ slice_metrics[0].confidence }}</span></p>
+            <p><strong>Entropy:</strong> <span id="sliceEntropy">{{ slice_metrics[0].entropy }}</span></p>
+            <p><strong>Boundary Smoothness:</strong> <span id="sliceSmoothness">{{ slice_metrics[0].boundary_smoothness }}</span></p>
+            <h3>Class Distribution</h3>
+            <table id="sliceClassDistribution">
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                        <th>Frequency</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cls, freq in slice_metrics[0].class_distribution.items() %}
+                        <tr>
+                            <td>{{ cls }}</td>
+                            <td>{{ freq }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        const sliceMetrics = {{ slice_metrics|tojson|safe }};
+        // const sliceSlider = document.getElementById('sliceSlider'); // Removed duplicate declaration
+        const sliceConfidence = document.getElementById('sliceConfidence');
+        const sliceEntropy = document.getElementById('sliceEntropy');
+        const sliceSmoothness = document.getElementById('sliceSmoothness');
+        const sliceClassDistribution = document.getElementById('sliceClassDistribution');
+    
+        function updateSliceMetrics(sliceIndex) {
+            const metrics = sliceMetrics[sliceIndex];
+            sliceConfidence.textContent = metrics.confidence;
+            sliceEntropy.textContent = metrics.entropy;
+            sliceSmoothness.textContent = metrics.boundary_smoothness;
+    
+            // Update class distribution table
+            const tbody = sliceClassDistribution.querySelector('tbody');
+            tbody.innerHTML = '';  // Clear existing rows
+            for (const [cls, freq] of Object.entries(metrics.class_distribution)) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${cls}</td><td>${freq}</td>`;
+                tbody.appendChild(row);
+            }
+        }
+    
+        sliceSlider.addEventListener('input', function() {
+            const sliceIndex = parseInt(sliceSlider.value, 10);
+            updateSliceMetrics(sliceIndex);
+        });
+    
+        // Initialize metrics for the first slice
+        updateSliceMetrics(0);
+    </script>
+
+    <br>
+    <a href="/">Upload Another Image</a>
+
+    <script>
+        const imageSlices = {{ image_slices|tojson|safe }};
+        const sliceSlider = document.getElementById('sliceSlider');
+        const sliceImage = document.getElementById('sliceImage');
+        const toggleMask = document.getElementById('toggleMask');
+
+        function changeSlice(step) {
+            let sliceIndex = parseInt(sliceSlider.value, 10) + step;
+            sliceIndex = Math.max(0, Math.min(sliceIndex, imageSlices.length - 1));  // Clamp value
+            sliceSlider.value = sliceIndex;
+            sliceImage.src = `data:image/png;base64,${imageSlices[sliceIndex]}`;
+        }
+
+        sliceSlider.addEventListener('input', function() {
+            const sliceIndex = parseInt(sliceSlider.value, 10);
+            sliceImage.src = `data:image/png;base64,${imageSlices[sliceIndex]}`;
+        });
+
+        toggleMask.addEventListener('change', function() {
+            sliceImage.style.opacity = toggleMask.checked ? 1 : 0.5;
+        });
+    </script>
+</body>
+</html>
