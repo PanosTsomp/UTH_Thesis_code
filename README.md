@@ -25,3 +25,6 @@ the need for model interpretability, with tools such as Grad-CAM, to boost the c
 of clinical experts and facilitate the embedding of artificial intelligence in daily clinical
 routine. Meanwhile, the study suggests specific directions for future research targeting
 the sustainable and efficient integration of AI into clinical settings.
+
+## University of Thessaly Institutional Repository
+https://ir.lib.uth.gr/xmlui/handle/11615/86950
